@@ -1,0 +1,26 @@
+.Rproj.user/*
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+
+# C++
+*.o
+*.so
+*.dll
+src/*.o
+src/*.so
+src/*.dll
+src/TMB/*.o
+src/TMB/*.so
+src/TMB/*.dll
+src/childSurvLL.so
+
+# osx
+*.DS_Store
+inst/.DS_Store
+inst/.DS_Store
+inst/include/.DS_Store
+*.icloud
+.Rbuildignore
