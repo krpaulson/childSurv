@@ -1,4 +1,6 @@
 
+#ifndef helpers_hpp
+#define helpers_hpp 1
 
 // pc prior for normal precisions
 // https://github.com/taylorokonek/stbench/blob/main/inst/include/stbench/addtl_densities.hpp
@@ -8,3 +10,5 @@ Type dpcprec(Type log_tau, Type U, Type alpha, int give_log = 0) {
   Type logres = log(lambda) - log(2) - log_tau/2 - lambda * pow(exp(log_tau), -1/2);
   if(give_log) return logres; else return exp(logres);
 }
+
+#endif
