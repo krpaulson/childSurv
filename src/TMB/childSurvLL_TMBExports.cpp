@@ -2,12 +2,15 @@
 
 #define TMB_LIB_INIT R_init_childSurvLL_TMBExports
 #include <TMB.hpp>
+#include "dh_vr_rw.hpp"
 #include "ll_vr_rw.hpp"
 
 template<class Type>
 Type objective_function<Type>::operator() () {
   DATA_STRING(model);
-  if(model == "ll_vr_rw") {
+  if(model == "dh_vr_rw") {
+    return dh_vr_rw(this);
+  } else if(model == "ll_vr_rw") {
     return ll_vr_rw(this);
   } else {
     Rf_error("Unknown model.");
