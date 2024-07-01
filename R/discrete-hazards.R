@@ -13,7 +13,7 @@
 #' @importFrom stats nlminb
 #'
 #' @examples
-discrete_hazards <- function(data_vr, data_direct, time_model, start_year = 1950, end_year = 2030, include_iid_in_pred = T) {
+discrete_hazards <- function(data_vr, data_direct, time_model, start_year = 1950, end_year = 2030, include_iid_in_pred = F) {
   # add: data_fbh, data_other
   
   n_years <- length(start_year:end_year)
