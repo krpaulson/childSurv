@@ -10,7 +10,7 @@ log_logistic(
   time_model,
   start_year = 1950,
   end_year = 2030,
-  include_iid_in_pred = T
+  include_iid_in_pred = F
 )
 }
 \arguments{

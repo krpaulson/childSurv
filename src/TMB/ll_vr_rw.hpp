@@ -48,15 +48,15 @@ Type ll_vr_rw(objective_function<Type>* obj) {
   PARAMETER(intercept_log_scale);
   PARAMETER(log_tau_delta_log_shape);
   PARAMETER(log_tau_delta_log_scale);
-  //PARAMETER(log_tau_epsilon_log_shape);
-  //PARAMETER(log_tau_epsilon_log_scale);
+  PARAMETER(log_tau_epsilon_log_shape);
+  PARAMETER(log_tau_epsilon_log_scale);
   //PARAMETER_VECTOR(epsilon);
   //PARAMETER(log_prec_epsilon);
-  PARAMETER(log_phi);
+  // PARAMETER(log_phi);
   PARAMETER_VECTOR(delta_log_shape);
   PARAMETER_VECTOR(delta_log_scale);
-  //PARAMETER_VECTOR(epsilon_log_shape);
-  //PARAMETER_VECTOR(epsilon_log_scale);
+  PARAMETER_VECTOR(epsilon_log_shape);
+  PARAMETER_VECTOR(epsilon_log_scale);
   
   ////////////////////////
   // priors + hyperpriors
@@ -87,7 +87,6 @@ Type ll_vr_rw(objective_function<Type>* obj) {
   }
   nll += GMRF(Q_scale)(delta_log_scale);
   
-  /*
   // iid effects
   Type sd_epsilon_log_shape = exp(-0.5 * log_tau_epsilon_log_shape);
   Type sd_epsilon_log_scale = exp(-0.5 * log_tau_epsilon_log_scale);
@@ -95,15 +94,14 @@ Type ll_vr_rw(objective_function<Type>* obj) {
     nll -= dnorm(epsilon_log_shape(i), Type(0.0), sd_epsilon_log_shape, true);
     nll -= dnorm(epsilon_log_scale(i), Type(0.0), sd_epsilon_log_scale, true);
   }
-  */
   
   // hyperpriors
-  nll -= dpcprec(log_tau_delta_log_shape, Type(0.001), Type(0.5), true); //1.0, 0.01
-  nll -= dpcprec(log_tau_delta_log_scale, Type(0.1), Type(0.5), true); //1.0, 0.01
-  //nll -= dlgamma(log_tau_delta_log_shape, Type(1.0), Type(1/0.00005), true);
-  //nll -= dlgamma(log_tau_delta_log_scale, Type(1.0), Type(1/0.00005), true);
-  //nll -= dlgamma(log_tau_epsilon_log_shape, Type(1.0), Type(1/0.00005), true);
-  //nll -= dlgamma(log_tau_epsilon_log_scale, Type(1.0), Type(1/0.00005), true);
+  //nll -= dpcprec(log_tau_delta_log_shape, Type(0.1), Type(0.5), true); //1.0, 0.01
+  //nll -= dpcprec(log_tau_delta_log_scale, Type(0.1), Type(0.5), true); //1.0, 0.01
+  nll -= dlgamma(log_tau_delta_log_shape, Type(1.0), Type(1/0.00005), true);
+  nll -= dlgamma(log_tau_delta_log_scale, Type(1.0), Type(1/0.00005), true);
+  nll -= dlgamma(log_tau_epsilon_log_shape, Type(1.0), Type(1/0.00005), true);
+  nll -= dlgamma(log_tau_epsilon_log_scale, Type(1.0), Type(1/0.00005), true);
   
   // overdispersion for Poisson
   /*
@@ -113,7 +111,7 @@ Type ll_vr_rw(objective_function<Type>* obj) {
   }
   nll -= dnorm(log_prec_epsilon, Type(9.0), Type(3.0), true);
    */
-  nll -= dnorm(log_phi, Type(0.5), Type(1.0), true);
+  // nll -= dnorm(log_phi, Type(0.5), Type(1.0), true);
   
   ////////////////
   // constraints
@@ -189,12 +187,12 @@ Type ll_vr_rw(objective_function<Type>* obj) {
   Type log_scale;
   Type lambda;
   Type mx;
-  Type prob;
-  Type phi = exp(log_phi);
+  //Type prob;
+  //Type phi = exp(log_phi);
   for (int i=0; i<n_obs_vr; i++) {
     int idx_time = time_id_vr(i) - 1;
-    log_shape = intercept_log_shape + delta_log_shape_c(idx_time); // + epsilon_log_shape(idx_time);
-    log_scale = intercept_log_scale + delta_log_scale_c(idx_time); // + epsilon_log_scale(idx_time);
+    log_shape = intercept_log_shape + delta_log_shape_c(idx_time) + epsilon_log_shape(idx_time);
+    log_scale = intercept_log_scale + delta_log_scale_c(idx_time) + epsilon_log_scale(idx_time);
     survfunc<Type> s(log_shape, log_scale);
     // nn
     if (months_vr[i] == 0 && n_vr[i] == 1) {
@@ -207,17 +205,17 @@ Type ll_vr_rw(objective_function<Type>* obj) {
       if (lambda < 0) {
         lambda = 0;
       }
-      //nll -= dpois(obs_vr[i], lambda, true);
-      prob = phi / (lambda + phi);
-      nll -= dnbinom(obs_vr[i], phi, prob, true);
+      nll -= dpois(obs_vr[i], lambda, true);
+      //prob = phi / (lambda + phi);
+      //nll -= dnbinom(obs_vr[i], phi, prob, true);
     // otherwise
     } else {
       mx = 12 * (s(months_vr[i]) - s(months_vr[i]+n_vr[i])) /
         romberg::integrate(s, months_vr[i], months_vr[i] + n_vr[i]);
       lambda = (pop[i] * mx); // * exp(epsilon[i]);
-      //nll -= dpois(obs_vr[i], lambda, true);
-      prob = phi / (lambda + phi);
-      nll -= dnbinom(obs_vr[i], phi, prob, true);
+      nll -= dpois(obs_vr[i], lambda, true);
+      //prob = phi / (lambda + phi);
+      //nll -= dnbinom(obs_vr[i], phi, prob, true);
     }
   }
   

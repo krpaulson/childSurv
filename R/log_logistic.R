@@ -13,7 +13,7 @@
 #' @importFrom stats nlminb
 #'
 #' @examples
-log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, end_year = 2030, include_iid_in_pred = T) {
+log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, end_year = 2030, include_iid_in_pred = F) {
   # add: data_fbh, data_other
   
   n_years <- length(start_year:end_year)
@@ -67,17 +67,17 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
                        intercept_log_scale = 39,
                        log_tau_delta_log_shape = 0,
                        log_tau_delta_log_scale = 0,
-                       # log_tau_epsilon_log_shape = 0,
-                       # log_tau_epsilon_log_scale = 0,
+                       log_tau_epsilon_log_shape = 0,
+                       log_tau_epsilon_log_scale = 0,
                        # epsilon = rep(0, data_vr$n_obs_vr),
                        # log_prec_epsilon = 9,
-                       log_phi = 0,
+                       # log_phi = 0,
                        delta_log_shape = rep(0, n_years),
-                       delta_log_scale = rep(0, n_years)) #,
-                       #epsilon_log_shape = rep(0, n_years),
-                       #epsilon_log_scale = rep(0, n_years))
-    random = c("delta_log_shape", "delta_log_scale") #,
-               #"epsilon_log_shape", "epsilon_log_scale")
+                       delta_log_scale = rep(0, n_years),
+                       epsilon_log_shape = rep(0, n_years),
+                       epsilon_log_scale = rep(0, n_years))
+    random = c("delta_log_shape", "delta_log_scale",
+               "epsilon_log_shape", "epsilon_log_scale")
       
   # } else {
   #   stop("Invalid time model.")
@@ -91,8 +91,8 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
                         DLL = "childSurvLL_TMBExports")
   
   opt <- nlminb(obj$par, obj$fn, obj$gr,
-                lower = c(-1, 2, -10, -15, -2), #, -10, -10, -2), #, rep(-1, data_vr$n_obs_vr), 3),  # log_shape -5 to -0.2
-                upper = c(2, 250, 10, 10, 4)) #20, 20, 4)) #, rep(1, data_vr$n_obs_vr), 15)) # log-log-shape -2 to 2
+                lower = c(-1, 2, -10, -15, -10, -10), #, rep(-1, data_vr$n_obs_vr), 3),  # log_shape -5 to -0.2
+                upper = c(2, 250, 10, 10, 20, 20)) #, rep(1, data_vr$n_obs_vr), 15)) # log-log-shape -2 to 2
   SD0 <- TMB::sdreport(obj,
                        getJointPrecision = TRUE,
                        getReportCovariance = TRUE,
