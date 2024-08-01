@@ -96,10 +96,10 @@ Type ll_vr_rw(objective_function<Type>* obj) {
   }
   
   // hyperpriors
-  //nll -= dpcprec(log_tau_delta_log_shape, Type(0.1), Type(0.5), true); //1.0, 0.01
-  //nll -= dpcprec(log_tau_delta_log_scale, Type(0.1), Type(0.5), true); //1.0, 0.01
-  nll -= dlgamma(log_tau_delta_log_shape, Type(1.0), Type(1/0.00005), true);
-  nll -= dlgamma(log_tau_delta_log_scale, Type(1.0), Type(1/0.00005), true);
+  nll -= dpcprec(log_tau_delta_log_shape, Type(0.1), Type(0.5), true); //1.0, 0.01
+  nll -= dpcprec(log_tau_delta_log_scale, Type(0.1), Type(0.5), true); //1.0, 0.01
+  //nll -= dlgamma(log_tau_delta_log_shape, Type(1.0), Type(1/0.00005), true);
+  //nll -= dlgamma(log_tau_delta_log_scale, Type(1.0), Type(1/0.00005), true);
   nll -= dlgamma(log_tau_epsilon_log_shape, Type(1.0), Type(1/0.00005), true);
   nll -= dlgamma(log_tau_epsilon_log_scale, Type(1.0), Type(1/0.00005), true);
   
