@@ -9,6 +9,19 @@ Type dpcprec(Type log_tau, Type U, Type alpha, int give_log = 0) {
   Type lambda = -log(alpha) / U;
   Type logres = log(lambda) - log(2) - log_tau/2 - lambda * pow(exp(log_tau), -1/2);
   if(give_log) return logres; else return exp(logres);
-}
+};
+
+// survival function
+// reference example for syntax: https://kaskr.github.io/adcomp/namespaceromberg.html
+template<class Type>
+struct survfunc {
+  Type log_shape, log_scale;
+  survfunc(Type log_shape_, Type log_scale_)
+    : log_shape (log_shape_), log_scale (log_scale_) {}
+  Type operator()(Type x){
+    return 1 / (1 + pow( (x / exp(log_scale)), exp(-1*exp(log_shape))));
+  }
+};
 
 #endif
+

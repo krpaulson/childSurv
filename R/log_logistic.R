@@ -3,7 +3,7 @@
 #'
 #' @param data_vr input data counts
 #' @param data_direct input data in pre-processed form
-#' @param time_model spline or rw2
+#' @param time_model pspline or rw2
 #' @param start_year first year to estimate
 #' @param end_year last year to estimate
 #' @param include_iid_in_pred include IID errors in prediction
@@ -18,31 +18,40 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
   
   n_years <- length(start_year:end_year)
   
-  # if (time_model == "spline") {
-  #   
-  #   B <- bspline(1:n_years)
-  #   n_betas <- ncol(B)
-  #   A <- matrix(1, nrow=1, ncol=n_betas)
-  #   inla.rw <- utils::getFromNamespace("inla.rw", "INLA")
-  #   R <- inla.rw(n_betas, order = 2, sparse = T, scale.model = T)
-  #   R <- R + diag(n_betas) * 1e-6
-  #   
-  #   data_list <- list(model = "ll_vr_rw",
-  #                     B=B, A=A, R=R,
-  #                     n_obs_vr = data_vr$n_obs_vr,
-  #                     time_id_vr = data_vr$time_id_vr,
-  #                     months_vr = data_vr$months_vr,
-  #                     obs_vr = data_vr$obs_vr,
-  #                     se_vr = data_vr$se_vr)
-  #   param_list <- list(intercept_log_shape = 0,
-  #                      intercept_log_scale = 0,
-  #                      log_tau_delta_log_shape = 0,
-  #                      log_tau_delta_log_scale = 0,
-  #                      delta_log_shape = rep(0, n_betas),
-  #                      delta_log_scale = rep(0, n_betas))
-  #   random <- c("delta_log_shape", "delta_log_scale")
-  #   
-  # } else if (time_model == "rw2") {
+  if (time_model == "pspline") {
+
+    B <- bspline(1:n_years)
+    n_betas <- ncol(B)
+    A <- matrix(1, nrow=1, ncol=n_betas)
+    inla.rw <- utils::getFromNamespace("inla.rw", "INLA")
+    R <- inla.rw(n_betas, order = 2, sparse = T, scale.model = T)
+    R <- R + diag(n_betas) * 1e-6
+
+    data_list <- list(model = "ll_vr_pspline",
+                      B=B, A=A, R=R,
+                      n_obs_vr = data_vr$n_obs_vr,
+                      time_id_vr = data_vr$time_id_vr,
+                      months_vr = data_vr$months_vr,
+                      obs_vr = data_vr$obs_vr,
+                      n_vr = data_vr$n_vr,
+                      births = data_vr$births,
+                      pop = data_vr$pop)
+    param_list <- list(intercept_log_shape = 0,
+                       intercept_log_scale = 0,
+                       log_tau_delta_log_shape = 0,
+                       log_tau_delta_log_scale = 0,
+                       #log_phi = 0,
+                       log_tau_epsilon = 0,
+                       delta_log_shape = rep(0, n_betas),
+                       delta_log_scale = rep(0, n_betas),
+                       epsilon = rep(0, data_vr$n_obs_vr))
+    random <- c("delta_log_shape", "delta_log_scale",
+                "epsilon")
+    
+    init_lower <- c(-1, 2, -10, -15, -10, -10, -5)
+    init_upper <- c(2, 250, 10, 10, 20, 20, 5)
+
+  } else if (time_model == "rw2") {
     
     inla.rw = utils::getFromNamespace("inla.rw", "INLA")
     R <- inla.rw(n_years, order = 2, sparse = T, scale.model = T)
@@ -76,12 +85,15 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
                        delta_log_scale = rep(0, n_years),
                        epsilon_log_shape = rep(0, n_years),
                        epsilon_log_scale = rep(0, n_years))
-    random = c("delta_log_shape", "delta_log_scale",
+    random <- c("delta_log_shape", "delta_log_scale",
                "epsilon_log_shape", "epsilon_log_scale")
+    
+    init_lower <- c(-1, 2, -10, -15, -10, -10)
+    init_upper <- c(2, 250, 10, 10, 20, 20)
       
-  # } else {
-  #   stop("Invalid time model.")
-  # }
+  } else {
+     stop("Invalid time model.")
+  }
   
   obj <- TMB::MakeADFun(data = data_list,
                         parameters = param_list,
@@ -91,8 +103,7 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
                         DLL = "childSurvLL_TMBExports")
   
   opt <- nlminb(obj$par, obj$fn, obj$gr,
-                lower = c(-1, 2, -10, -15, -10, -10), #, rep(-1, data_vr$n_obs_vr), 3),  # log_shape -5 to -0.2
-                upper = c(2, 250, 10, 10, 20, 20)) #, rep(1, data_vr$n_obs_vr), 15)) # log-log-shape -2 to 2
+                lower = init_lower, upper = init_upper)
   SD0 <- TMB::sdreport(obj,
                        getJointPrecision = TRUE,
                        getReportCovariance = TRUE,
@@ -111,8 +122,9 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
   time.struct.scale.idx <- which(names(mu) == "delta_log_scale")
   time.unstruct.shape.idx <- which(names(mu) == "epsilon_log_shape")
   time.unstruct.scale.idx <- which(names(mu) == "epsilon_log_scale")
+  log.phi.idx <- which(names(mu) == "log_phi")
   
-  if (time_model == "spline") {
+  if (time_model == "pspline") {
     
     # create list of constraint matrices for these terms
     A.mat.list <- list()
@@ -143,6 +155,11 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
       matrix(rep(t.draws[intercept.scale.idx,], n_betas), nrow = n_betas, byrow = T) +
       t.draws[time.struct.scale.idx,]
     fitted_scale <- B %*% fitted_beta_scale
+    
+    # log_phi draws
+    #fitted_log_phi <- t.draws[log.phi.idx,]
+    # overdispersion draws
+    fitted_overdispersion <- t.draws[which(names(mu) == "log_tau_epsilon"),]
     
   } else if(time_model == "rw2") {
     
@@ -214,5 +231,7 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
   df_pred$u5mr_smoothed_lower <- apply(u5mr_mat, 1, quantile, 0.05)
   df_pred$u5mr_smoothed_upper <- apply(u5mr_mat, 1, quantile, 0.95)
   
-  return(df_pred)
+  #return(list(df_pred, fitted_log_phi))
+  #return(df_pred)
+  return(list(df_pred, fitted_overdispersion))
 }
