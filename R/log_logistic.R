@@ -40,16 +40,17 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
                        intercept_log_scale = 0,
                        log_tau_delta_log_shape = 0,
                        log_tau_delta_log_scale = 0,
-                       #log_phi = 0,
-                       log_tau_epsilon = 0,
+                       # log_tau_epsilon = 0,
                        delta_log_shape = rep(0, n_betas),
-                       delta_log_scale = rep(0, n_betas),
-                       epsilon = rep(0, data_vr$n_obs_vr))
-    random <- c("delta_log_shape", "delta_log_scale",
-                "epsilon")
+                       delta_log_scale = rep(0, n_betas)) #,
+                       # epsilon = rep(0, data_vr$n_obs_vr))
+    random <- c("delta_log_shape", "delta_log_scale") #,
+               # "epsilon")
     
-    init_lower <- c(-1, 2, -10, -15, -10, -10, -5)
-    init_upper <- c(2, 250, 10, 10, 20, 20, 5)
+    #init_lower <- c(-1, 2, -10, -15, -10, -10, -5)
+    #init_upper <- c(2, 250, 10, 10, 20, 20, 5)
+    init_lower <- c(-1, 2, -20, -20) #, -5)
+    init_upper <- c(2, 250, 20, 20) #, 5)
 
   } else if (time_model == "rw2") {
     
@@ -159,7 +160,9 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
     # log_phi draws
     #fitted_log_phi <- t.draws[log.phi.idx,]
     # overdispersion draws
-    fitted_overdispersion <- t.draws[which(names(mu) == "log_tau_epsilon"),]
+    #fitted_overdispersion <- t.draws[which(names(mu) == "log_tau_epsilon"),]
+    #fitted_log_tau_shape <- t.draws[which(names(mu) == "log_tau_delta_log_shape"),]
+    #fitted_log_tau_scale <- t.draws[which(names(mu) == "log_tau_delta_log_scale"),]
     
   } else if(time_model == "rw2") {
     
@@ -232,6 +235,6 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
   df_pred$u5mr_smoothed_upper <- apply(u5mr_mat, 1, quantile, 0.95)
   
   #return(list(df_pred, fitted_log_phi))
-  #return(df_pred)
-  return(list(df_pred, fitted_overdispersion))
+  return(df_pred)
+  #return(list(df_pred, fitted_overdispersion, fitted_log_tau_shape, fitted_log_tau_scale))
 }

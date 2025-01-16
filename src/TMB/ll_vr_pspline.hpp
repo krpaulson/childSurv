@@ -31,18 +31,17 @@ Type ll_vr_pspline(objective_function<Type>* obj) {
   DATA_VECTOR(months_direct);
   DATA_VECTOR(obs_direct);
   DATA_VECTOR(se_direct);
-   */
+  */
   
   // parameters
   PARAMETER(intercept_log_shape);
   PARAMETER(intercept_log_scale);
   PARAMETER(log_tau_delta_log_shape);
   PARAMETER(log_tau_delta_log_scale);
-  PARAMETER(log_tau_epsilon);
-  //PARAMETER(log_phi);
+  //PARAMETER(log_tau_epsilon);
   PARAMETER_VECTOR(delta_log_shape);
   PARAMETER_VECTOR(delta_log_scale);
-  PARAMETER_VECTOR(epsilon);
+  //PARAMETER_VECTOR(epsilon);
   
   
   ////////////////////////
@@ -75,16 +74,18 @@ Type ll_vr_pspline(objective_function<Type>* obj) {
   nll += GMRF(Q_scale)(delta_log_scale);
   
   // hyperpriors
-  nll -= dpcprec(log_tau_delta_log_shape, Type(0.001), Type(0.5), true);
-  nll -= dpcprec(log_tau_delta_log_scale, Type(0.001), Type(0.5), true);
+  nll -= dpcprec(log_tau_delta_log_shape, Type(0.01), Type(0.5), true);
+  nll -= dpcprec(log_tau_delta_log_scale, Type(0.01), Type(0.5), true);
   
+  /*
   // overdispersion
   Type sd_epsilon = exp(-0.5 * log_tau_epsilon);
   for (int i = 0; i < n_obs_vr; i++) {
     nll -= dnorm(epsilon(i), Type(0.0), sd_epsilon, true);
   }
-  nll -= dpcprec(log_tau_epsilon, Type(0.001), Type(0.5), true);
-
+  nll -= dpcprec(log_tau_epsilon, Type(0.01), Type(0.5), true);
+  //nll -= dnorm(log_tau_epsilon, Type(9.2), Type(0.0001), true);
+  */
   
   ////////////////
   // constraints
@@ -162,13 +163,13 @@ Type ll_vr_pspline(objective_function<Type>* obj) {
     survfunc<Type> s(log_shape, log_scale);
     // nn
     if (months_vr[i] == 0 && n_vr[i] == 1) {
-      lambda = (1 - s(Type(1.0))) * exp(epsilon[i]);
+      lambda = (1 - s(Type(1.0))); // * exp(epsilon[i]);
       nll -= dbinom(obs_vr[i], births[i], lambda, true);
     // pnn
     } else if (months_vr[i] == 1 && n_vr[i] == 11) {
       mx = 12 * (1 - s(Type(12.0))) / romberg::integrate(s, Type(0.0), Type(12.0));
       lambda = (pop[i] * mx - births[i] * (1 - s(Type(1.0))));
-      lambda = lambda * exp(epsilon[i]);
+      //lambda = lambda * exp(epsilon[i]);
       if (lambda < 0) {
         lambda = 0;
       }
@@ -179,7 +180,7 @@ Type ll_vr_pspline(objective_function<Type>* obj) {
     } else {
       mx = 12 * (s(months_vr[i]) - s(months_vr[i]+n_vr[i])) /
         romberg::integrate(s, months_vr[i], months_vr[i] + n_vr[i]);
-      lambda = (pop[i] * mx * exp(epsilon[i]));
+      lambda = pop[i] * mx; // * exp(epsilon[i]));
       nll -= dpois(obs_vr[i], lambda, true);
       //prob = phi / (lambda + phi);
       //nll -= dnbinom(obs_vr[i], phi, prob, true);
