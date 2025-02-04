@@ -7,7 +7,8 @@
 log_logistic(
   data_vr,
   data_direct,
-  time_model,
+  time_model = "pspline",
+  count_model = "poisson",
   start_year = 1950,
   end_year = 2030,
   include_iid_in_pred = F
@@ -18,7 +19,9 @@ log_logistic(
 
 \item{data_direct}{input data in pre-processed form}
 
-\item{time_model}{spline or rw2}
+\item{time_model}{pspline or rw2}
+
+\item{count_model}{poisson or poisson_lognormal}
 
 \item{start_year}{first year to estimate}
 

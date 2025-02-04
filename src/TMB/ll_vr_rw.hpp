@@ -3,20 +3,6 @@
 
 #include "childSurvLL/helpers.hpp"
 
-// survival function
-// reference example for syntax: https://kaskr.github.io/adcomp/namespaceromberg.html
-/*
-template<class Type>
-struct survfunc {
-  Type log_shape, log_scale;
-  survfunc(Type log_shape_, Type log_scale_)
-    : log_shape (log_shape_), log_scale (log_scale_) {}
-  Type operator()(Type x){
-    return 1 / (1 + pow( (x / exp(log_scale)), exp(-1*exp(log_shape))));
-  }
-};
-*/
-
 template <class Type>
 Type ll_vr_rw(objective_function<Type>* obj) {
 

@@ -1,0 +1,259 @@
+
+#' Fit piecewise exponential model
+#'
+#' @param data_vr input data counts
+#' @param data_direct input data in pre-processed form
+#' @param time_model spline or rw2
+#' @param start_year first year to estimate
+#' @param end_year last year to estimate
+#' @param include_iid_in_pred include IID errors in prediction
+#'
+#' @return
+#' @export
+#' @importFrom stats nlminb
+#'
+#' @examples
+piecewise_exponential <- function(data_vr, data_direct, time_model, start_year = 1950, end_year = 2030, include_iid_in_pred = F) {
+  # add: data_fbh, data_other
+  
+  n_years <- length(start_year:end_year)
+  
+  if (time_model == "pspline") {
+
+    B <- bspline(1:n_years)
+    n_betas <- ncol(B)
+    A <- matrix(1, nrow=1, ncol=n_betas)
+    inla.rw <- utils::getFromNamespace("inla.rw", "INLA")
+    R <- inla.rw(n_betas, order = 2, sparse = T, scale.model = T)
+    R <- R + diag(n_betas) * 1e-6
+    
+    data_list <- list(model = "pe_vr_pspline",
+                      B = B, A = A, R = R,
+                      n_obs_vr = data_vr$n_obs_vr,
+                      time_id_vr = data_vr$time_id_vr,
+                      months_vr = data_vr$months_vr,
+                      obs_vr = data_vr$obs_vr,
+                      n_vr = data_vr$n_vr,
+                      births = data_vr$births,
+                      pop = data_vr$pop,
+                      n_obs_direct = data_direct$n_obs_direct,
+                      time_id_direct = data_direct$time_id_direct,
+                      months_direct = data_direct$months_direct,
+                      obs_direct = data_direct$obs_direct,
+                      se_direct = data_direct$se_direct)
+    param_list <- list(intercept_log_alpha0 = -10.1,
+                       intercept_log_alpha1 = -8.4,
+                       intercept_log_alpha2 = -5.6,
+                       log_tau_delta_log_alpha0 = 0,
+                       log_tau_delta_log_alpha1 = 0,
+                       log_tau_delta_log_alpha2 = 0,
+                       delta_log_alpha0 = rep(0, n_betas),
+                       delta_log_alpha1 = rep(0, n_betas),
+                       delta_log_alpha2 = rep(0, n_betas))
+    random <- c("delta_log_alpha0", "delta_log_alpha1", "delta_log_alpha2")
+    
+    init_lower <- c(-20, -20, -20, -20, -20, -20)
+    init_upper <- c(20, 20, 20, 20, 20, 20)
+
+  } else if (time_model == "rw2") {
+    
+    inla.rw = utils::getFromNamespace("inla.rw", "INLA")
+    R <- inla.rw(n_years, order = 2, sparse = T, scale.model = T)
+    R <- R + diag(n_years) * 1e-6
+    
+    data_list <- list(model = "pe_vr_rw",
+                      n_years = n_years,
+                      R = R,
+                      n_obs_vr = data_vr$n_obs_vr,
+                      time_id_vr = data_vr$time_id_vr,
+                      months_vr = data_vr$months_vr,
+                      obs_vr = data_vr$obs_vr,
+                      n_vr = data_vr$n_vr,
+                      births = data_vr$births,
+                      pop = data_vr$pop,
+                      n_obs_direct = data_direct$n_obs_direct,
+                      time_id_direct = data_direct$time_id_direct,
+                      months_direct = data_direct$months_direct,
+                      obs_direct = data_direct$obs_direct,
+                      se_direct = data_direct$se_direct)
+    param_list <- list(intercept_log_alpha0 = -4,
+                       intercept_log_alpha1 = -4,
+                       intercept_log_alpha2 = -4,
+                       log_tau_delta_log_alpha0 = 0,
+                       log_tau_delta_log_alpha1 = 0,
+                       log_tau_delta_log_alpha2 = 0,
+                       log_tau_epsilon_log_alpha0 = 0,
+                       log_tau_epsilon_log_alpha1 = 0,
+                       log_tau_epsilon_log_alpha2 = 0,
+                       delta_log_alpha0 = rep(0, n_years),
+                       delta_log_alpha1 = rep(0, n_years),
+                       delta_log_alpha2 = rep(0, n_years),
+                       epsilon_log_alpha0 = rep(0, n_years),
+                       epsilon_log_alpha1 = rep(0, n_years),
+                       epsilon_log_alpha2 = rep(0, n_years))
+    random = c("delta_log_alpha0", "delta_log_alpha1", "delta_log_alpha2",
+               "epsilon_log_alpha0", "epsilon_log_alpha1", "epsilon_log_alpha2")
+    
+    init_lower <- c(-15, -15, -15, -20, -20, -20, -20, -20, -20)
+    init_upper <- c(5, 5, 5, 20, 20, 20, 20, 20, 20)
+
+  } else {
+    stop("Invalid time model.")
+  }
+  
+  obj <- TMB::MakeADFun(data = data_list,
+                        parameters = param_list,
+                        random = random,
+                        map = list(),
+                        hessian = TRUE,
+                        DLL = "childSurvLL_TMBExports")
+  
+  opt <- nlminb(obj$par, obj$fn, obj$gr,
+                lower = init_lower, upper = init_upper)
+  SD0 <- TMB::sdreport(obj,
+                       getJointPrecision = TRUE,
+                       getReportCovariance = TRUE,
+                       bias.correct = TRUE,
+                       bias.correct.control = list(sd = TRUE))
+  
+  
+  # TMB post-processing ------------------------------------------------------
+  
+  # obtain point estimates (means) for fixed and random effects
+  mu <- c(SD0$par.fixed, SD0$par.random)
+  
+  # get ids for different parameters
+  intercept.alpha0.idx <- which(names(mu) == "intercept_log_alpha0")
+  intercept.alpha1.idx <- which(names(mu) == "intercept_log_alpha1")
+  intercept.alpha2.idx <- which(names(mu) == "intercept_log_alpha2")
+  time.struct.alpha0.idx <- which(names(mu) == "delta_log_alpha0")
+  time.struct.alpha1.idx <- which(names(mu) == "delta_log_alpha1")
+  time.struct.alpha2.idx <- which(names(mu) == "delta_log_alpha2")
+  time.unstruct.alpha0.idx <- which(names(mu) == "epsilon_log_alpha0")
+  time.unstruct.alpha1.idx <- which(names(mu) == "epsilon_log_alpha1")
+  time.unstruct.alpha2.idx <- which(names(mu) == "epsilon_log_alpha2")
+  
+  if (time_model == "pspline") {
+    
+    # create list of constraint matrices for these terms
+    A.mat.list <- list()
+    A.mat.list[[1]] <- matrix(1, nrow = 1, ncol = n_betas)
+    A.mat.list[[2]] <- matrix(1, nrow = 1, ncol = n_betas)
+    A.mat.list[[3]] <- matrix(1, nrow = 1, ncol = n_betas)
+    
+    # sample
+    # Reference: https://github.com/taylorokonek/stbench/blob/main/R/multiconstr_prec.R
+    multiconstr_prec = utils::getFromNamespace("multiconstr_prec", "stbench")
+    t.draws <- multiconstr_prec(mu = mu,
+                                prec = SD0$jointPrecision,
+                                n.sims = 1000,
+                                constrain.idx.list = list(time.struct.alpha0.idx,
+                                                          time.struct.alpha1.idx,
+                                                          time.struct.alpha2.idx),
+                                A.mat.list = A.mat.list)
+    
+    # take the constrained draws
+    t.draws <- t.draws$x.c
+    
+    # combine draws for linear predictor (alpha0)
+    fitted_alpha0 <-
+      matrix(rep(t.draws[intercept.alpha0.idx,], n_betas), nrow = n_betas, byrow = T) +
+      t.draws[time.struct.alpha0.idx,]
+    fitted_alpha0 <- B %*% fitted_alpha0
+    
+    # combine draws for linear predictor (alpha1)
+    fitted_alpha1 <-
+      matrix(rep(t.draws[intercept.alpha1.idx,], n_betas), nrow = n_betas, byrow = T) +
+      t.draws[time.struct.alpha1.idx,]
+    fitted_alpha1 <- B %*% fitted_alpha1
+    
+    # combine draws for linear predictor (alpha2)
+    fitted_alpha2 <-
+      matrix(rep(t.draws[intercept.alpha2.idx,], n_betas), nrow = n_betas, byrow = T) +
+      t.draws[time.struct.alpha2.idx,]
+    fitted_alpha2 <- B %*% fitted_alpha2
+    
+  } else if(time_model == "rw2") {
+    
+    # create list of constraint matrices for these terms
+    A.mat.list <- list()
+    A.mat.list[[1]] <- matrix(1, nrow = 1, ncol = n_years)
+    A.mat.list[[2]] <- matrix(1, nrow = 1, ncol = n_years)
+    A.mat.list[[3]] <- matrix(1, nrow = 1, ncol = n_years)
+    
+    # sample
+    # Reference: https://github.com/taylorokonek/stbench/blob/main/R/multiconstr_prec.R
+    multiconstr_prec = utils::getFromNamespace("multiconstr_prec", "stbench")
+    t.draws <- multiconstr_prec(mu = mu,
+                                prec = SD0$jointPrecision,
+                                n.sims = 1000,
+                                constrain.idx.list = list(time.struct.alpha0.idx,
+                                                          time.struct.alpha1.idx,
+                                                          time.struct.alpha2.idx),
+                                A.mat.list = A.mat.list)
+    
+    # take the constrained draws
+    t.draws <- t.draws$x.c
+    
+    # combine draws for linear predictor (logit alpha0)
+    fitted_alpha0 <-
+      matrix(rep(t.draws[intercept.alpha0.idx,], n_years), nrow = n_years, byrow = T) +
+      t.draws[time.struct.alpha0.idx,]
+    
+    # combine draws for linear predictor (logit alpha1)
+    fitted_alpha1 <-
+      matrix(rep(t.draws[intercept.alpha1.idx,], n_years), nrow = n_years, byrow = T) +
+      t.draws[time.struct.alpha1.idx,]
+    
+    # combine draws for linear predictor (logit alpha2)
+    fitted_alpha2 <-
+      matrix(rep(t.draws[intercept.alpha2.idx,], n_years), nrow = n_years, byrow = T) +
+      t.draws[time.struct.alpha2.idx,]
+    
+    # add IID
+    if (include_iid_in_pred) {
+      fitted_alpha0 <- fitted_alpha0 + t.draws[time.unstruct.alpha0.idx,]
+      fitted_alpha1 <- fitted_alpha1 + t.draws[time.unstruct.alpha1.idx,]
+      fitted_alpha2 <- fitted_alpha2 + t.draws[time.unstruct.alpha2.idx,]
+    }
+    
+  } else {
+    stop("Invalid temporal model.")
+  }
+  
+  # combine to get nmr, imr, u5mr
+  nmr_mat <- matrix(nrow = n_years, ncol = 1000)
+  imr_mat <- matrix(nrow = n_years, ncol = 1000)
+  u5mr_mat <- matrix(nrow = n_years, ncol = 1000)
+  
+  for (t in 1:n_years) {
+    nmr_mat[t,] <- 1-exp(-1 * (exp(fitted_alpha0)[t,] + exp(fitted_alpha1)[t,] + exp(fitted_alpha2)[t,]))
+    imr_mat[t,] <- 1-exp(-1 * (12*exp(fitted_alpha0)[t,] + 12*exp(fitted_alpha1)[t,] + exp(fitted_alpha2)[t,]))
+    u5mr_mat[t,] <- 1-exp(-1 * (60*exp(fitted_alpha0)[t,] + 12*exp(fitted_alpha1)[t,] + exp(fitted_alpha2)[t,]))
+  }
+  
+  #  create prediction data.frame
+  df_pred <- data.frame(year = start_year:end_year)
+  
+  # get summaries
+  df_pred$log_alpha0_smoothed_med <- apply(fitted_alpha0, 1, quantile, 0.5)
+  df_pred$log_alpha0_smoothed_lower <- apply(fitted_alpha0, 1, quantile, 0.05)
+  df_pred$log_alpha0_smoothed_upper <- apply(fitted_alpha0, 1, quantile, 0.95)
+  df_pred$log_alpha1_smoothed_med <- apply(fitted_alpha1, 1, quantile, 0.5)
+  df_pred$log_alpha1_smoothed_lower <- apply(fitted_alpha1, 1, quantile, 0.05)
+  df_pred$log_alpha1_smoothed_upper <- apply(fitted_alpha1, 1, quantile, 0.95)
+  df_pred$log_alpha2_smoothed_med <- apply(fitted_alpha2, 1, quantile, 0.5)
+  df_pred$log_alpha2_smoothed_lower <- apply(fitted_alpha2, 1, quantile, 0.05)
+  df_pred$log_alpha2_smoothed_upper <- apply(fitted_alpha2, 1, quantile, 0.95)
+  df_pred$nmr_smoothed_med <- apply(nmr_mat, 1, quantile, 0.5)
+  df_pred$nmr_smoothed_lower <- apply(nmr_mat, 1, quantile, 0.05)
+  df_pred$nmr_smoothed_upper <- apply(nmr_mat, 1, quantile, 0.95)
+  df_pred$imr_smoothed_med <- apply(imr_mat, 1, quantile, 0.5)
+  df_pred$imr_smoothed_lower <- apply(imr_mat, 1, quantile, 0.05)
+  df_pred$imr_smoothed_upper <- apply(imr_mat, 1, quantile, 0.95)
+  df_pred$u5mr_smoothed_med <- apply(u5mr_mat, 1, quantile, 0.5)
+  df_pred$u5mr_smoothed_lower <- apply(u5mr_mat, 1, quantile, 0.05)
+  df_pred$u5mr_smoothed_upper <- apply(u5mr_mat, 1, quantile, 0.95)
+  
+  return(df_pred)
+}

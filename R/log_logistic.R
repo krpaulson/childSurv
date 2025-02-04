@@ -4,6 +4,7 @@
 #' @param data_vr input data counts
 #' @param data_direct input data in pre-processed form
 #' @param time_model pspline or rw2
+#' @param count_model poisson or poisson_lognormal
 #' @param start_year first year to estimate
 #' @param end_year last year to estimate
 #' @param include_iid_in_pred include IID errors in prediction
@@ -13,7 +14,7 @@
 #' @importFrom stats nlminb
 #'
 #' @examples
-log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, end_year = 2030, include_iid_in_pred = F) {
+log_logistic <- function(data_vr, data_direct, time_model = "pspline", count_model = "poisson", start_year = 1950, end_year = 2030, include_iid_in_pred = F) {
   # add: data_fbh, data_other
   
   n_years <- length(start_year:end_year)
@@ -36,21 +37,32 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
                       n_vr = data_vr$n_vr,
                       births = data_vr$births,
                       pop = data_vr$pop)
-    param_list <- list(intercept_log_shape = 0,
-                       intercept_log_scale = 0,
-                       log_tau_delta_log_shape = 0,
-                       log_tau_delta_log_scale = 0,
-                       # log_tau_epsilon = 0,
-                       delta_log_shape = rep(0, n_betas),
-                       delta_log_scale = rep(0, n_betas)) #,
-                       # epsilon = rep(0, data_vr$n_obs_vr))
-    random <- c("delta_log_shape", "delta_log_scale") #,
-               # "epsilon")
     
-    #init_lower <- c(-1, 2, -10, -15, -10, -10, -5)
-    #init_upper <- c(2, 250, 10, 10, 20, 20, 5)
-    init_lower <- c(-1, 2, -20, -20) #, -5)
-    init_upper <- c(2, 250, 20, 20) #, 5)
+    if (count_model == "poisson") {
+      param_list <- list(intercept_log_shape = 0.7,
+                         intercept_log_scale = 39,
+                         log_tau_delta_log_shape = -1,
+                         log_tau_delta_log_scale = -7,
+                         delta_log_shape = rep(0, n_betas),
+                         delta_log_scale = rep(0, n_betas))
+      random <- c("delta_log_shape", "delta_log_scale")
+      init_lower <- c(-1, 2, -2, -10)
+      init_upper <- c(2, 250, 16, 16)
+      
+    } else if (count_model == "poisson_lognormal") {
+      data_list$model <- "ll_vr_pspline_poisson_lognormal"
+      param_list <- list(intercept_log_shape = 0.7,
+                         intercept_log_scale = 39,
+                         log_tau_delta_log_shape = -1,
+                         log_tau_delta_log_scale = -7,
+                         log_tau_epsilon = 0,
+                         delta_log_shape = rep(0, n_betas),
+                         delta_log_scale = rep(0, n_betas),
+                         epsilon = rep(0, data_vr$n_obs_vr))
+      random <- c("delta_log_shape", "delta_log_scale", "epsilon")
+      init_lower <- c(-1, 2, -2, -10, -5)
+      init_upper <- c(2, 250, 16, 16, 5)
+    }
 
   } else if (time_model == "rw2") {
     
@@ -67,21 +79,18 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
                       obs_vr = data_vr$obs_vr,
                       n_vr = data_vr$n_vr,
                       births = data_vr$births,
-                      pop = data_vr$pop) #,
-                      # n_obs_direct = data_direct$n_obs_direct,
-                      # time_id_direct = data_direct$time_id_direct,
-                      # months_direct = data_direct$months_direct,
-                      # obs_direct = data_direct$obs_direct,
-                      # se_direct = data_direct$se_direct)
-    param_list <- list(intercept_log_shape = 0.7, #-1.5,
+                      pop = data_vr$pop,
+                      n_obs_direct = data_direct$n_obs_direct,
+                      time_id_direct = data_direct$time_id_direct,
+                      months_direct = data_direct$months_direct,
+                      obs_direct = data_direct$obs_direct,
+                      se_direct = data_direct$se_direct)
+    param_list <- list(intercept_log_shape = 0.7,
                        intercept_log_scale = 39,
                        log_tau_delta_log_shape = 0,
                        log_tau_delta_log_scale = 0,
                        log_tau_epsilon_log_shape = 0,
                        log_tau_epsilon_log_scale = 0,
-                       # epsilon = rep(0, data_vr$n_obs_vr),
-                       # log_prec_epsilon = 9,
-                       # log_phi = 0,
                        delta_log_shape = rep(0, n_years),
                        delta_log_scale = rep(0, n_years),
                        epsilon_log_shape = rep(0, n_years),
@@ -157,12 +166,12 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
       t.draws[time.struct.scale.idx,]
     fitted_scale <- B %*% fitted_beta_scale
     
-    # log_phi draws
-    #fitted_log_phi <- t.draws[log.phi.idx,]
     # overdispersion draws
-    #fitted_overdispersion <- t.draws[which(names(mu) == "log_tau_epsilon"),]
-    #fitted_log_tau_shape <- t.draws[which(names(mu) == "log_tau_delta_log_shape"),]
-    #fitted_log_tau_scale <- t.draws[which(names(mu) == "log_tau_delta_log_scale"),]
+    if (count_model == "poisson_lognormal") {
+      fitted_overdispersion <- t.draws[which(names(mu) == "log_tau_epsilon"),]
+      fitted_log_tau_shape <- t.draws[which(names(mu) == "log_tau_delta_log_shape"),]
+      fitted_log_tau_scale <- t.draws[which(names(mu) == "log_tau_delta_log_scale"),]
+    }
     
   } else if(time_model == "rw2") {
     
@@ -234,7 +243,9 @@ log_logistic <- function(data_vr, data_direct, time_model, start_year = 1950, en
   df_pred$u5mr_smoothed_lower <- apply(u5mr_mat, 1, quantile, 0.05)
   df_pred$u5mr_smoothed_upper <- apply(u5mr_mat, 1, quantile, 0.95)
   
-  #return(list(df_pred, fitted_log_phi))
-  return(df_pred)
-  #return(list(df_pred, fitted_overdispersion, fitted_log_tau_shape, fitted_log_tau_scale))
+  if (count_model == "poisson") {
+    return(df_pred)
+  } else if (count_model == "poisson_lognormal") {
+    return(list(df_pred, fitted_overdispersion, fitted_log_tau_shape, fitted_log_tau_scale))
+  }
 }
