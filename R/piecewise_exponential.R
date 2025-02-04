@@ -16,6 +16,11 @@
 piecewise_exponential <- function(data_vr, data_direct, time_model, start_year = 1950, end_year = 2030, include_iid_in_pred = F) {
   # add: data_fbh, data_other
   
+  # checks
+  if (data_direct$n_obs_direct > 0 & anyNA(data_direct$se_direct)) {
+    stop("data_direct$se_direct contains NA values.")
+  }
+  
   n_years <- length(start_year:end_year)
   
   if (time_model == "pspline") {
@@ -255,5 +260,5 @@ piecewise_exponential <- function(data_vr, data_direct, time_model, start_year =
   df_pred$u5mr_smoothed_lower <- apply(u5mr_mat, 1, quantile, 0.05)
   df_pred$u5mr_smoothed_upper <- apply(u5mr_mat, 1, quantile, 0.95)
   
-  return(df_pred)
+  return(list(df_pred, t.draws))
 }
