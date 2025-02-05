@@ -25,23 +25,21 @@ Type ll_vr_pspline_poisson_lognormal(objective_function<Type>* obj) {
   DATA_VECTOR(births);
   DATA_VECTOR(pop);
   int n_betas = B.cols();
-  /*
   DATA_INTEGER(n_obs_direct);
   DATA_IVECTOR(time_id_direct);
   DATA_VECTOR(months_direct);
   DATA_VECTOR(obs_direct);
   DATA_VECTOR(se_direct);
-  */
   
   // parameters
   PARAMETER(intercept_log_shape);
   PARAMETER(intercept_log_scale);
   PARAMETER(log_tau_delta_log_shape);
   PARAMETER(log_tau_delta_log_scale);
-  //PARAMETER(log_tau_epsilon);
+  PARAMETER(log_tau_epsilon);
   PARAMETER_VECTOR(delta_log_shape);
   PARAMETER_VECTOR(delta_log_scale);
-  //PARAMETER_VECTOR(epsilon);
+  PARAMETER_VECTOR(epsilon);
   
   
   ////////////////////////
@@ -77,7 +75,6 @@ Type ll_vr_pspline_poisson_lognormal(objective_function<Type>* obj) {
   nll -= dpcprec(log_tau_delta_log_shape, Type(0.01), Type(0.5), true);
   nll -= dpcprec(log_tau_delta_log_scale, Type(0.01), Type(0.5), true);
   
-  /*
   // overdispersion
   Type sd_epsilon = exp(-0.5 * log_tau_epsilon);
   for (int i = 0; i < n_obs_vr; i++) {
@@ -85,7 +82,7 @@ Type ll_vr_pspline_poisson_lognormal(objective_function<Type>* obj) {
   }
   nll -= dpcprec(log_tau_epsilon, Type(0.01), Type(0.5), true);
   //nll -= dnorm(log_tau_epsilon, Type(9.2), Type(0.0001), true);
-  */
+  
   
   ////////////////
   // constraints
@@ -153,8 +150,6 @@ Type ll_vr_pspline_poisson_lognormal(objective_function<Type>* obj) {
   Type log_scale;
   Type lambda;
   Type mx;
-  //Type prob;
-  //Type phi = exp(log_phi);
   for (int i=0; i<n_obs_vr; i++) {
     int idx_time = time_id_vr(i) - 1;
     vector<Type> B_t = B.row(idx_time);
@@ -163,41 +158,36 @@ Type ll_vr_pspline_poisson_lognormal(objective_function<Type>* obj) {
     survfunc<Type> s(log_shape, log_scale);
     // nn
     if (months_vr[i] == 0 && n_vr[i] == 1) {
-      lambda = (1 - s(Type(1.0))); // * exp(epsilon[i]);
+      lambda = (1 - s(Type(1.0))) * exp(epsilon[i]);
       nll -= dbinom(obs_vr[i], births[i], lambda, true);
     // pnn
     } else if (months_vr[i] == 1 && n_vr[i] == 11) {
       mx = 12 * (1 - s(Type(12.0))) / romberg::integrate(s, Type(0.0), Type(12.0));
       lambda = (pop[i] * mx - births[i] * (1 - s(Type(1.0))));
-      //lambda = lambda * exp(epsilon[i]);
+      lambda = lambda * exp(epsilon[i]);
       if (lambda < 0) {
         lambda = 0;
       }
       nll -= dpois(obs_vr[i], lambda, true);
-      //prob = phi / (lambda + phi);
-      //nll -= dnbinom(obs_vr[i], phi, prob, true);
     // otherwise
     } else {
       mx = 12 * (s(months_vr[i]) - s(months_vr[i]+n_vr[i])) /
         romberg::integrate(s, months_vr[i], months_vr[i] + n_vr[i]);
-      lambda = pop[i] * mx; // * exp(epsilon[i]));
+      lambda = pop[i] * mx * exp(epsilon[i]);
       nll -= dpois(obs_vr[i], lambda, true);
-      //prob = phi / (lambda + phi);
-      //nll -= dnbinom(obs_vr[i], phi, prob, true);
     }
   }
   
   // direct observations of logit mortality rates
-  /*
   Type logit_xq0;
   for (int i=0; i<n_obs_direct; i++) {
     int idx_time = time_id_direct(i) - 1;
-    log_shape = intercept_log_shape + delta_log_shape_c(idx_time) + epsilon_log_shape(idx_time);
-    log_scale = intercept_log_scale + delta_log_scale_c(idx_time) + epsilon_log_scale(idx_time);
-    logit_xq0 = exp(log_shape) * (log(months_direct(i)) - log_scale);
+    vector<Type> B_t = B.row(idx_time);
+    log_shape = (B_t*beta_log_shape).sum();
+    log_scale = (B_t*beta_log_scale).sum();
+    logit_xq0 = exp(-1*exp(log_shape)) * (log(months_direct(i)) - log_scale);
     nll -= dnorm(obs_direct(i), logit_xq0, se_direct(i), true);
   }
-  */
   
   return nll;
 }

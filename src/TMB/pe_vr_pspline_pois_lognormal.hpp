@@ -214,7 +214,7 @@ Type pe_vr_pspline_pois_lognormal(objective_function<Type>* obj) {
     // 1-4 years
     } else {
       mx = 12 * alpha0;
-      lambda = pop[i] * mx;
+      lambda = pop[i] * mx * exp(epsilon[i]);
       nll -= dpois(obs_vr[i], lambda, true);
     }
   }

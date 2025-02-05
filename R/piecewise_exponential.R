@@ -4,6 +4,7 @@
 #' @param data_vr input data counts
 #' @param data_direct input data in pre-processed form
 #' @param time_model spline or rw2
+#' @param count_model poisson or poisson_lognormal
 #' @param start_year first year to estimate
 #' @param end_year last year to estimate
 #' @param include_iid_in_pred include IID errors in prediction
@@ -13,7 +14,7 @@
 #' @importFrom stats nlminb
 #'
 #' @examples
-piecewise_exponential <- function(data_vr, data_direct, time_model, start_year = 1950, end_year = 2030, include_iid_in_pred = F) {
+piecewise_exponential <- function(data_vr, data_direct, time_model = "pspline", count_model = "poisson", start_year = 1950, end_year = 2030, include_iid_in_pred = F) {
   # add: data_fbh, data_other
   
   # checks
@@ -46,20 +47,39 @@ piecewise_exponential <- function(data_vr, data_direct, time_model, start_year =
                       months_direct = data_direct$months_direct,
                       obs_direct = data_direct$obs_direct,
                       se_direct = data_direct$se_direct)
-    param_list <- list(intercept_log_alpha0 = -10.1,
-                       intercept_log_alpha1 = -8.4,
-                       intercept_log_alpha2 = -5.6,
-                       log_tau_delta_log_alpha0 = 0,
-                       log_tau_delta_log_alpha1 = 0,
-                       log_tau_delta_log_alpha2 = 0,
-                       delta_log_alpha0 = rep(0, n_betas),
-                       delta_log_alpha1 = rep(0, n_betas),
-                       delta_log_alpha2 = rep(0, n_betas))
-    random <- c("delta_log_alpha0", "delta_log_alpha1", "delta_log_alpha2")
     
-    init_lower <- c(-20, -20, -20, -20, -20, -20)
-    init_upper <- c(20, 20, 20, 20, 20, 20)
-
+    if (count_model == "poisson") {
+      param_list <- list(intercept_log_alpha0 = -10.0,
+                         intercept_log_alpha1 = -8.4,
+                         intercept_log_alpha2 = -5.1,
+                         log_tau_delta_log_alpha0 = 1.4,
+                         log_tau_delta_log_alpha1 = -2.0,
+                         log_tau_delta_log_alpha2 = -0.17,
+                         delta_log_alpha0 = rep(0, n_betas),
+                         delta_log_alpha1 = rep(0, n_betas),
+                         delta_log_alpha2 = rep(0, n_betas))
+      random <- c("delta_log_alpha0", "delta_log_alpha1", "delta_log_alpha2")
+      init_lower <- c(-20, -20, -20, -20, -20, -20)
+      init_upper <- c(10, 10, 10, 10, 10, 10)
+      
+    } else if (count_model == "poisson_lognormal") {
+      data_list$model <- "pe_vr_pspline_pois_lognormal"
+      param_list <- list(intercept_log_alpha0 = -10.0,
+                         intercept_log_alpha1 = -8.4,
+                         intercept_log_alpha2 = -5.1,
+                         log_tau_delta_log_alpha0 = 1.4,
+                         log_tau_delta_log_alpha1 = -2.0,
+                         log_tau_delta_log_alpha2 = -0.17,
+                         log_tau_epsilon = 0,
+                         delta_log_alpha0 = rep(0, n_betas),
+                         delta_log_alpha1 = rep(0, n_betas),
+                         delta_log_alpha2 = rep(0, n_betas),
+                         epsilon = rep(0, data_vr$n_obs_vr))
+      random <- c("delta_log_alpha0", "delta_log_alpha1", "delta_log_alpha2", "epsilon")
+      init_lower <- c(-20, -20, -20, -20, -20, -20, -20)
+      init_upper <- c(10, 10, 10, 10, 10, 10, 10)
+    }
+    
   } else if (time_model == "rw2") {
     
     inla.rw = utils::getFromNamespace("inla.rw", "INLA")

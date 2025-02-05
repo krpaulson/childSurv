@@ -50,9 +50,9 @@ Type pe_vr_pspline(objective_function<Type>* obj) {
   Type nll = 0.0;
   
   // intercepts
-  nll -= dnorm(intercept_log_alpha0, Type(0.0), Type(30.00), true);
-  nll -= dnorm(intercept_log_alpha1, Type(0.0), Type(30.00), true);
-  nll -= dnorm(intercept_log_alpha2, Type(0.0), Type(30.00), true);
+  nll -= dnorm(intercept_log_alpha0, Type(-10.0), Type(0.8), true);
+  nll -= dnorm(intercept_log_alpha1, Type(-8.4), Type(2.9), true);
+  nll -= dnorm(intercept_log_alpha2, Type(-5.1), Type(1.5), true);
   
   // RW2 (alpha0)
   Eigen::SparseMatrix<Type> Q0(n_betas, n_betas);
@@ -82,15 +82,15 @@ Type pe_vr_pspline(objective_function<Type>* obj) {
   nll += GMRF(Q2)(delta_log_alpha2);
   
   // hyperpriors
-  nll -= dpcprec(log_tau_delta_log_alpha0, Type(0.001), Type(0.5), true);
-  nll -= dpcprec(log_tau_delta_log_alpha1, Type(0.001), Type(0.5), true);
-  nll -= dpcprec(log_tau_delta_log_alpha2, Type(0.001), Type(0.5), true);
+  //nll -= dpcprec(log_tau_delta_log_alpha0, Type(0.001), Type(0.5), true);
+  //nll -= dpcprec(log_tau_delta_log_alpha1, Type(0.001), Type(0.5), true);
+  //nll -= dpcprec(log_tau_delta_log_alpha2, Type(0.001), Type(0.5), true);
   //nll -= dlgamma(log_tau_delta_log_alpha0, Type(1.0), Type(1/0.00005), true);
   //nll -= dlgamma(log_tau_delta_log_alpha1, Type(1.0), Type(1/0.00005), true);
   //nll -= dlgamma(log_tau_delta_log_alpha2, Type(1.0), Type(1/0.00005), true);
-  //nll -= dnorm(log_tau_delta_log_alpha0, Type(2.0), Type(0.001), true);
-  //nll -= dnorm(log_tau_delta_log_alpha1, Type(2.0), Type(0.001), true);
-  //nll -= dnorm(log_tau_delta_log_alpha2, Type(2.0), Type(0.001), true);
+  nll -= dnorm(log_tau_delta_log_alpha0, Type(1.4), Type(0.5), true);
+  nll -= dnorm(log_tau_delta_log_alpha1, Type(-2.0), Type(0.5), true);
+  nll -= dnorm(log_tau_delta_log_alpha2, Type(-0.17), Type(0.5), true);
   
   
   ////////////////
