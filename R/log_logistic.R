@@ -36,7 +36,12 @@ log_logistic <- function(data_vr, data_direct, time_model = "pspline", count_mod
                       obs_vr = data_vr$obs_vr,
                       n_vr = data_vr$n_vr,
                       births = data_vr$births,
-                      pop = data_vr$pop)
+                      pop = data_vr$pop,
+                      n_obs_direct = data_direct$n_obs_direct,
+                      time_id_direct = data_direct$time_id_direct,
+                      months_direct = data_direct$months_direct,
+                      obs_direct = data_direct$obs_direct,
+                      se_direct = data_direct$se_direct)
     
     if (count_model == "poisson") {
       param_list <- list(intercept_log_shape = 0.7,
