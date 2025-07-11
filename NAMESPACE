@@ -3,4 +3,4 @@
 export(log_logistic)
 export(piecewise_exponential)
 importFrom(stats,nlminb)
-useDynLib(childSurvLL, .registration=TRUE); useDynLib(childSurvLL_TMBExports)
+useDynLib(childSurv, .registration=TRUE); useDynLib(childSurv_TMBExports)

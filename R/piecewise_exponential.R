@@ -9,11 +9,9 @@
 #' @param end_year last year to estimate
 #' @param include_iid_in_pred include IID errors in prediction
 #'
-#' @return
+#' @return data.frame with predictions
 #' @export
 #' @importFrom stats nlminb
-#'
-#' @examples
 piecewise_exponential <- function(data_vr, data_direct, time_model = "pspline", count_model = "poisson", start_year = 1950, end_year = 2030, include_iid_in_pred = F) {
   # add: data_fbh, data_other
   
@@ -131,7 +129,7 @@ piecewise_exponential <- function(data_vr, data_direct, time_model = "pspline", 
                         random = random,
                         map = list(),
                         hessian = TRUE,
-                        DLL = "childSurvLL_TMBExports")
+                        DLL = "childSurv_TMBExports")
   
   opt <- nlminb(obj$par, obj$fn, obj$gr,
                 lower = init_lower, upper = init_upper)

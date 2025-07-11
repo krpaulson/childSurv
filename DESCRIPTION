@@ -1,10 +1,10 @@
-Package: childSurvLL
-Title: Fit log-logistic survival models for child mortality
+Package: childSurv
+Title: Fit survival models for child mortality
 Version: 0.0.0.9000
 Authors@R: 
     person("Katie", "Paulson", , "krpaul@uw.edu", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: Fit log-logistic survival models for child mortality using vital registration, household surveys, and other available data types.
+           comment = c(ORCID = "0000-0002-6521-7994"))
+Description: Fit survival models for child mortality using vital registration, household surveys, and other available data types.
 License: GPL (>= 2)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

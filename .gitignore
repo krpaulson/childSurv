@@ -15,7 +15,7 @@ src/*.dll
 src/TMB/*.o
 src/TMB/*.so
 src/TMB/*.dll
-src/childSurvLL.so
+src/childSurv.so
 
 # osx
 *.DS_Store

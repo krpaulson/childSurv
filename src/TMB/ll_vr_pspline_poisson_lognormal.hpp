@@ -1,7 +1,7 @@
 #undef TMB_OBJECTIVE_PTR
 #define TMB_OBJECTIVE_PTR obj
 
-#include "childSurvLL/helpers.hpp"
+#include "childSurv/helpers.hpp"
 
 template <class Type>
 Type ll_vr_pspline_poisson_lognormal(objective_function<Type>* obj) {

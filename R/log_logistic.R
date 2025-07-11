@@ -9,11 +9,11 @@
 #' @param end_year last year to estimate
 #' @param include_iid_in_pred include IID errors in prediction
 #'
-#' @return
+#' @return For poisson count model, returns data.frame with predictions only. For poisson lognormal,
+#'  returns prediction data frame in addition to fitted overdispersion and fitted log precision
+#'  for shape and scale parameters
 #' @export
 #' @importFrom stats nlminb
-#'
-#' @examples
 log_logistic <- function(data_vr, data_direct, time_model = "pspline", count_model = "poisson", start_year = 1950, end_year = 2030, include_iid_in_pred = F) {
   # add: data_fbh, data_other
   
@@ -115,7 +115,7 @@ log_logistic <- function(data_vr, data_direct, time_model = "pspline", count_mod
                         random = random,
                         map = list(),
                         hessian = TRUE,
-                        DLL = "childSurvLL_TMBExports")
+                        DLL = "childSurv_TMBExports")
   
   opt <- nlminb(obj$par, obj$fn, obj$gr,
                 lower = init_lower, upper = init_upper)

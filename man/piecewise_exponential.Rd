@@ -7,7 +7,8 @@
 piecewise_exponential(
   data_vr,
   data_direct,
-  time_model,
+  time_model = "pspline",
+  count_model = "poisson",
   start_year = 1950,
   end_year = 2030,
   include_iid_in_pred = F
@@ -20,11 +21,16 @@ piecewise_exponential(
 
 \item{time_model}{spline or rw2}
 
+\item{count_model}{poisson or poisson_lognormal}
+
 \item{start_year}{first year to estimate}
 
 \item{end_year}{last year to estimate}
 
 \item{include_iid_in_pred}{include IID errors in prediction}
+}
+\value{
+data.frame with predictions
 }
 \description{
 Fit piecewise exponential model

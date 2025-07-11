@@ -1,4 +1,4 @@
-#' @rawNamespace useDynLib(childSurvLL, .registration=TRUE); useDynLib(childSurvLL_TMBExports)
+#' @rawNamespace useDynLib(childSurv, .registration=TRUE); useDynLib(childSurv_TMBExports)
 #' @keywords internal
 "_PACKAGE"
 
