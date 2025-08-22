@@ -5,35 +5,81 @@
 \title{Fit log-logistic model}
 \usage{
 log_logistic(
-  data_vr,
-  data_direct,
-  time_model = "pspline",
+  data_fbh = NULL,
+  data_vr = NULL,
+  data_pp = NULL,
+  time_model = "rw2",
   count_model = "poisson",
   start_year = 1950,
   end_year = 2030,
-  include_iid_in_pred = F
+  include_iid_in_pred = FALSE
 )
 }
 \arguments{
-\item{data_vr}{input data counts}
+\item{data_fbh}{Input data pseudo-likelihood estimates from full birth
+histories. If not NULL, is a list with items:
+\describe{
+\item{n_obs_fbh}{Number of observations (number of surveys times number
+of years per survey). Also the length of thetahat.}
+\item{thetahat}{Vector of pseudo-likelihood observations.}
+\item{V}{Variance-covariance matrix for all pseudo-likelihood estimates.}
+\item{time_id_fbh}{Vector containing numeric indicator for which time point
+each observation belongs to within the vector start_year:end_year}
+\item{par_id_fbh}{Numeric indicator for which parameter an observation
+belongs to (1=shape; 2=scale).}
+}}
 
-\item{data_direct}{input data in pre-processed form}
+\item{data_vr}{Input data with VR counts. If not NULL, is a list with items:
+\describe{
+\item{n_obs_vr}{Number of observations from vital registration}
+\item{time_id_vr}{Vector containing numeric indicator for which time point
+each observation belongs to within the vector start_year:end_year}
+\item{months_vr}{Data are for nDx -- this vector input tells us what x is
+in months}
+\item{n_vr}{Data are for nDx -- this vector input tells us what n is in
+months}
+\item{obs_vr}{Vector containing observations of nDx (death counts)}
+\item{births}{Vector containing births in year of observation. Can be
+NA for entries corresponding to age groups that aren't neonatal.}
+\item{pop}{Vector containing mid-year population in the age group and
+year corresponding to each observation. Can be NA for entries
+corresponding to neonatal death counts.}
+}}
 
-\item{time_model}{pspline or rw2}
+\item{data_pp}{Input data in pre-processed mortality rate form. If not NULL,
+is a list with the items:
+\describe{
+\item{n_obs_pp}{Number of pre-processed estimates}
+\item{time_id_pp}{Vector containing numeric indicator for which time point
+each observation belongs to within the vector start_year:end_year}
+\item{months_pp}{Pre-processed estimates are for logit(nq0) -- this
+vector input tells us what n is in months.}
+\item{obs_pp}{Pre-processed estimate of logit(nq0)}
+\item{se_pp}{Standard error of pre-processed estimate of logit(nq0)}
+}}
 
-\item{count_model}{poisson or poisson_lognormal}
+\item{time_model}{One of either 'pspline' or 'rw2'}
 
-\item{start_year}{first year to estimate}
+\item{count_model}{One of either 'poisson' or 'poisson_lognormal'. If no
+VR data this argument does not impact the results.}
 
-\item{end_year}{last year to estimate}
+\item{start_year}{First year to estimate}
 
-\item{include_iid_in_pred}{include IID errors in prediction}
+\item{end_year}{Last year to estimate}
+
+\item{include_iid_in_pred}{Whether to include IID errors in prediction}
 }
 \value{
-For poisson count model, returns data.frame with predictions only. For poisson lognormal,
-returns prediction data frame in addition to fitted overdispersion and fitted log precision
-for shape and scale parameters
+For poisson count model, returns data.frame with predictions only.
+For poisson lognormal, returns prediction data frame in addition to fitted
+overdispersion and fitted log precision for shape and scale parameters.
 }
 \description{
-Fit log-logistic model
+Fit log-logistic survival model to input data which may
+include any combination of pseudo-likelihood estimates from
+full birth histories, vital registration counts (deaths, births,
+mid-year population), and pre-processed estimates of mortality rates. The
+temporal model can be either a penalized spline or a second order random
+walk. When VR is included, the count model can be either Poisson or
+Poisson-lognormal to capture overdispersion.
 }

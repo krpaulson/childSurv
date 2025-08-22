@@ -11,15 +11,15 @@ Type dpcprec(Type log_tau, Type U, Type alpha, int give_log = 0) {
   if(give_log) return logres; else return exp(logres);
 };
 
-// survival function
+// survival function for log-logistic model
 // reference example for syntax: https://kaskr.github.io/adcomp/namespaceromberg.html
 template<class Type>
 struct survfunc {
-  Type log_shape, log_scale;
-  survfunc(Type log_shape_, Type log_scale_)
-    : log_shape (log_shape_), log_scale (log_scale_) {}
+  Type logit_shape, log_scale;
+  survfunc(Type logit_shape_, Type log_scale_)
+    : logit_shape (logit_shape_), log_scale (log_scale_) {}
   Type operator()(Type x){
-    return 1 / (1 + pow( (x / exp(log_scale)), exp(-1*exp(log_shape))));
+    return 1 / (1 + pow( (x / exp(log_scale)), exp(logit_shape)/(1+exp(logit_shape)) ));
   }
 };
 

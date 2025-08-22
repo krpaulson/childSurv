@@ -2,31 +2,16 @@
 
 #define TMB_LIB_INIT R_init_childSurv_TMBExports
 #include <TMB.hpp>
-#include "ll_vr_pspline_poisson_lognormal.hpp"
-#include "ll_vr_pspline.hpp"
-#include "ll_vr_rw_poisson_lognormal.hpp"
-#include "ll_vr_rw.hpp"
-#include "pe_vr_pspline_pois_lognormal.hpp"
-#include "pe_vr_pspline.hpp"
-#include "pe_vr_rw.hpp"
+#include "ll_rw.hpp"
+#include "pe_rw.hpp"
 
 template<class Type>
 Type objective_function<Type>::operator() () {
   DATA_STRING(model);
-  if(model == "ll_vr_pspline_poisson_lognormal") {
-    return ll_vr_pspline_poisson_lognormal(this);
-  } else if(model == "ll_vr_pspline") {
-    return ll_vr_pspline(this);
-  } else if(model == "ll_vr_rw_poisson_lognormal") {
-    return ll_vr_rw_poisson_lognormal(this);
-  } else if(model == "ll_vr_rw") {
-    return ll_vr_rw(this);
-  } else if(model == "pe_vr_pspline_pois_lognormal") {
-    return pe_vr_pspline_pois_lognormal(this);
-  } else if(model == "pe_vr_pspline") {
-    return pe_vr_pspline(this);
-  } else if(model == "pe_vr_rw") {
-    return pe_vr_rw(this);
+  if(model == "ll_rw") {
+    return ll_rw(this);
+  } else if(model == "pe_rw") {
+    return pe_rw(this);
   } else {
     Rf_error("Unknown model.");
   }
